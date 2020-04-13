@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  - push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Checkout branch by name so that IKE tags image
+        run: |
+          github_ref=${{ github.ref }}
+          git checkout ${github_ref##*/}          
+
+      - name: Get Docker credentials
+        uses: say8425/aws-secrets-manager-actions@v1.1.1
+        with:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          SECRET_NAME: common/gh-actions/docker
+
+      - uses: actions/setup-node@v1
+      - name: Install ike
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo //registry.npmjs.org/:_authToken=$NPM_TOKEN > ~/.npmrc
+          npm install -g @onelogin/infrakit@1.8
+      - name: Install Python 3.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+  
+      - name: Lint
+        run: |
+          make test_lint
+      - name: Test
+        run: |
+          make test_unit
+      - name: Build image
+        run: |
+          make build-image
+  
+      - name: Push image
+        if: github.ref == 'refs/heads/master'
+        run: |
+          echo $docker_password | docker login docker.onlgn.net -u=$docker_username --password-stdin
+          make push-image
