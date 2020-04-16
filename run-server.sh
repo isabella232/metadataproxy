@@ -24,4 +24,4 @@ fi
 
 export PYTHONUNBUFFERED="true"
 
-/usr/local/bin/gunicorn metadataproxy:app -c $GUNICORN_CONFIG --log-level $LEVEL --workers=$WORKERS -k gevent -b $HOST:$PORT --access-logfile - --error-logfile - --log-file -
+exec /usr/local/bin/gunicorn metadataproxy:app -c $GUNICORN_CONFIG --log-level $LEVEL --workers=$WORKERS -k gevent -b $HOST:$PORT --access-logfile - --error-logfile - --log-file -
